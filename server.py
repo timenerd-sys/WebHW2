@@ -1,4 +1,5 @@
 import socket
+import threading
 
 from builder import Builder, Record
 from dns_parser import DNSParser
@@ -6,6 +7,7 @@ from resolver import Resolver
 
 HOST = '127.0.0.1'
 PORT = 53
+
 
 def multiply(name: str) -> bytes | None:
     labels = name.lower().split('.')
@@ -17,6 +19,7 @@ def multiply(name: str) -> bytes | None:
         if label.isdigit():
             result *= int(label)
     return bytes([127, 0, 0, result % 256])
+
 
 def handle(data: bytes) -> bytes:
     request = DNSParser(data)
@@ -48,6 +51,14 @@ def handle(data: bytes) -> bytes:
     return builder.build_response(request.id, flags, request.question_name, request.question_type,
                                   answers, authority)
 
+
+def serve(data: bytes, address: tuple[str, int]) -> None:
+    try:
+        s.sendto(handle(data), address)
+    except Exception as e:
+        print(e)
+
+
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.bind((HOST, PORT))
 print(f'DNS server on {HOST}:{PORT}')
@@ -55,6 +66,6 @@ print(f'DNS server on {HOST}:{PORT}')
 while True:
     try:
         data, address = s.recvfrom(4096)
-        s.sendto(handle(data), address)
+        threading.Thread(target=serve, args=(data, address), daemon=True).start()
     except Exception as e:
         print(e)
