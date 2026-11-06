@@ -50,7 +50,7 @@ class Builder:
         answer = b''
         answer += request_id
         answer += flags.to_bytes(2, 'big')
-        answer += b'\x00\x01'
+        answer += b'\x00\x01' # один вопрос
         answer += len(answers).to_bytes(2, 'big')
         answer += len(authority).to_bytes(2, 'big')
         answer += b'\x00\x00'

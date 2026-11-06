@@ -9,7 +9,7 @@ class DNSParser:
         self.id: bytes = b''
         self.flags: int = 0
         self.rcode: int = 0
-        self.counts: list[int] = []
+        self.counters: list[int] = []
         self.question_name: str = ''
         self.question_type: int = 0
 
@@ -20,16 +20,16 @@ class DNSParser:
     def parse(self) -> None:
         self.read_header()
         self.read_question()
-        self.answers = self.read_records(self.counts[1])
-        self.authority = self.read_records(self.counts[2])
-        self.additional = self.read_records(self.counts[3])
+        self.answers = self.read_records(self.counters[1])
+        self.authority = self.read_records(self.counters[2])
+        self.additional = self.read_records(self.counters[3])
 
     def read_header(self) -> None:
         self.id = self.data[0:2]
         self.flags = int.from_bytes(self.data[2:4], 'big')
         self.rcode = self.flags & 0x0F
         for i in range(4):
-            self.counts.append(int.from_bytes(self.data[4 + 2 * i:6 + 2 * i], 'big'))
+            self.counters.append(int.from_bytes(self.data[4 + 2 * i:6 + 2 * i], 'big'))
         self.position = 12
 
     def read_question(self) -> None:
@@ -46,7 +46,7 @@ class DNSParser:
     def read_record(self) -> Record:
         name, self.position = self.read_name(self.position)
         record_type = int.from_bytes(self.data[self.position:self.position + 2], 'big')
-        # пропускаем класс
+        # пропускаем класс (он IN)
         ttl = int.from_bytes(self.data[self.position + 4:self.position + 8], 'big')
         length = int.from_bytes(self.data[self.position + 8:self.position + 10], 'big')
         self.position += 10
@@ -67,7 +67,7 @@ class DNSParser:
             return Builder.add_name(name), name
 
         if record_type == 15: # MX
-            name, end = self.read_name(start + 2)
+            name, _ = self.read_name(start + 2)
             return raw[0:2] + Builder.add_name(name), name
 
         if record_type == 6: # SOA
